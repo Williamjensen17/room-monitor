@@ -1,1 +1,8 @@
-
+{
+  "id": "temp",
+  "name": "Temperature & Humidity",
+  "description": "Room climate monitor (simulated)",
+  "type": "sensor",
+  "icon": "🌡️",
+  "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/temp.js"
+}
