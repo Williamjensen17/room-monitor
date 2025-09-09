@@ -1,24 +1,16 @@
-# Room Monitor Dashboard
+# Room Monitor
 
-A lightweight Node.js + WebSocket server with a web UI to display **sensor data (temp, humidity)** and **real BTC/ETH prices & charts**.
+A lightweight Node.js + WebSocket server with a web UI to display **room sensors** (temperature & humidity) and **live Bitcoin/Ethereum data**.
 
 ---
 
-## 🚀 Quick Install (fresh Ubuntu Server)
+## 🚀 Quick Install (Fresh Ubuntu)
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/YOUR_USERNAME/room-monitor/main/scripts/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/scripts/install.sh)
 ```
 
-- Installs Node.js, NPM, PM2
-- Clones repo and runs server
-- Opens HTTP port 80
-
-Then visit: `http://YOUR_SERVER_IP`
-
----
-
-## 🔄 Upgrade Existing Installation
+## 🔄 Upgrade Existing Install
 
 ```bash
 cd ~/room-monitor/scripts
