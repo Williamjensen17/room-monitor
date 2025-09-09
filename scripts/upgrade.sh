@@ -3,14 +3,13 @@ set -e
 
 echo "🔄 Upgrading Room Monitor..."
 
-# Go to repo
-cd ~/room-monitor || { echo "❌ Room Monitor not installed at ~/room-monitor"; exit 1; }
+cd ~/room-monitor || { echo "❌ Not installed in ~/room-monitor"; exit 1; }
 
-# Pull the latest version
+# Fetch new code
 git fetch --all
 git reset --hard origin/main
 
-# Install updates to dependencies if any
+# Reinstall dependencies
 npm install
 
 # Restart service
