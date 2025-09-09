@@ -1,542 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Room Monitor</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Room Monitor with App Store</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0a0a0a; color: #fff; padding: 20px;
+    body { background:#0a0a0a; color:#fff; font-family:sans-serif; margin:0; }
+    .topbar { background:#1a1a1a; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .btn { background:#333; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; }
+    .btn:hover { background:#4a9eff; }
+    #grid { 
+      display:grid; 
+      grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); 
+      gap:15px; 
+      padding:20px; 
     }
-    .container { max-width: 1400px; margin: 0 auto; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .card { 
-      background: #1a1a1a; border-radius: 8px; padding: 20px;
-      border: 1px solid #333; transition: all 0.3s ease;
-    }
-    .card.clickable:hover { 
-      border-color: #4a9eff; cursor: pointer; transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(74, 158, 255, 0.2);
-    }
-    .card h2 { margin-bottom: 15px; color: #4a9eff; }
-    .metric { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
-    .value { font-weight: bold; font-size: 1.2em; }
-    .change { font-size: 0.9em; margin-left: 10px; }
-    .positive { color: #27ae60; }
-    .negative { color: #e74c3c; }
-    .temp { color: #ff6b6b; }
-    .humidity { color: #4ecdc4; }
-    .bitcoin { color: #f7931a; }
-    .ethereum { color: #627eea; }
-    .status { 
-      position: fixed; top: 10px; right: 10px; padding: 5px 10px;
-      border-radius: 15px; font-size: 12px; z-index: 1000;
-    }
-    .connected { background: #27ae60; }
-    .disconnected { background: #e74c3c; }
-    canvas { width: 100%; height: 200px; background: #111; border-radius: 4px; }
-    .crypto-info { display: flex; align-items: center; }
-    .last-update { font-size: 0.8em; color: #888; text-align: center; margin-top: 10px; }
-    .timestamp-indicator { 
-      font-size: 0.75em; color: #666; margin-top: 5px;
-      display: flex; justify-content: space-between;
-    }
-    .time-ago { color: #888; }
-    
-    /* Modal styles */
-    .modal { 
-      display: none; position: fixed; z-index: 2000; left: 0; top: 0;
-      width: 100%; height: 100%; background: rgba(0,0,0,0.8);
-    }
-    .modal-content { 
-      background: #1a1a1a; margin: 5% auto; padding: 20px;
-      border-radius: 8px; width: 90%; max-width: 1000px;
-      border: 1px solid #333; position: relative;
-    }
-    .close { 
-      color: #aaa; float: right; font-size: 28px; font-weight: bold;
-      cursor: pointer; line-height: 1;
-    }
-    .close:hover { color: #fff; }
-    .modal-chart { width: 100%; height: 400px; background: #111; border-radius: 4px; }
-    .time-selector { 
-      display: flex; gap: 10px; margin: 15px 0;
-      justify-content: center;
-    }
-    .time-btn { 
-      background: #333; color: #fff; border: none; padding: 8px 16px;
-      border-radius: 4px; cursor: pointer; transition: all 0.2s;
-    }
-    .time-btn.active, .time-btn:hover { background: #4a9eff; }
-    .crypto-stats { 
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px; margin: 20px 0;
-    }
-    .stat-item { 
-      background: #222; padding: 15px; border-radius: 6px;
-      text-align: center;
-    }
-    .stat-label { font-size: 0.9em; color: #888; margin-bottom: 5px; }
-    .stat-value { font-size: 1.3em; font-weight: bold; }
+    .card { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; position: relative; min-height:150px; }
+    .card.edit { outline:2px dashed #4a9eff; cursor:move; }
+    .store { display:flex; gap:10px; flex-wrap:wrap; padding:20px; }
+    .store-item { background:#222; border:1px solid #444; border-radius:6px; padding:10px; cursor:pointer; width:200px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
-  <div id="status" class="status disconnected">Disconnected</div>
-  
-  <div class="container">
-    <h1>Room Monitor Dashboard</h1>
-    
-    <div class="grid">
-      <div class="card">
-        <h2>Room Sensors</h2>
-        <div class="metric">
-          <span>Temperature:</span>
-          <span id="temp" class="value temp">--°C</span>
-        </div>
-        <div class="metric">
-          <span>Humidity:</span>
-          <span id="humidity" class="value humidity">--%</span>
-        </div>
-        <div class="timestamp-indicator">
-          <span>Last sensor reading:</span>
-          <span id="sensor-time" class="time-ago">--</span>
-        </div>
-      </div>
-      
-      <div class="card clickable" id="crypto-card">
-        <h2>Cryptocurrency Prices 📈</h2>
-        <div class="metric">
-          <span>Bitcoin:</span>
-          <div class="crypto-info">
-            <span id="bitcoin" class="value bitcoin">$--</span>
-            <span id="bitcoin-change" class="change">--</span>
-          </div>
-        </div>
-        <div class="metric">
-          <span>Ethereum:</span>
-          <div class="crypto-info">
-            <span id="ethereum" class="value ethereum">$--</span>
-            <span id="ethereum-change" class="change">--</span>
-          </div>
-        </div>
-        <div id="crypto-update" class="last-update">Last updated: --</div>
-        <div class="timestamp-indicator">
-          <span>15m ago: <span id="price-15m">--</span></span>
-          <span>30m ago: <span id="price-30m">--</span></span>
-          <span>1h ago: <span id="price-1h">--</span></span>
-        </div>
-      </div>
-      
-      <div class="card">
-        <h2>Temperature History</h2>
-        <canvas id="tempChart"></canvas>
-        <div class="timestamp-indicator">
-          <span>Real-time sensor data</span>
-          <span id="temp-points">-- points</span>
-        </div>
-      </div>
-      
-      <div class="card">
-        <h2>Live Crypto Prices</h2>
-        <canvas id="cryptoChart"></canvas>
-        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.8em;">
-          <span style="color: #f7931a;">● Bitcoin</span>
-          <span style="color: #627eea;">● Ethereum</span>
-        </div>
-        <div class="timestamp-indicator">
-          <span>Click crypto card for detailed view</span>
-          <span id="crypto-points">-- points</span>
-        </div>
-      </div>
+  <div class="topbar">
+    <span>📊 Room Monitor Dashboard</span>
+    <div>
+      <button class="btn" onclick="toggleEdit()">✏️ Edit Mode</button>
+      <button class="btn" onclick="toggleStore()">🛒 App Store</button>
     </div>
   </div>
 
-  <!-- Crypto Detail Modal -->
-  <div id="cryptoModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h2 id="modal-title">Bitcoin Price History</h2>
-      
-      <div class="time-selector">
-        <button class="time-btn active" data-time="1h">1 Hour</button>
-        <button class="time-btn" data-time="4h">4 Hours</button>
-        <button class="time-btn" data-time="12h">12 Hours</button>
-        <button class="time-btn" data-time="24h">24 Hours</button>
-      </div>
-      
-      <canvas id="modalChart" class="modal-chart"></canvas>
-      
-      <div class="crypto-stats">
-        <div class="stat-item">
-          <div class="stat-label">Current Price</div>
-          <div id="modal-current" class="stat-value">$--</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">24h Change</div>
-          <div id="modal-change" class="stat-value">--%</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Highest (24h)</div>
-          <div id="modal-high" class="stat-value">$--</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Lowest (24h)</div>
-          <div id="modal-low" class="stat-value">$--</div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div id="grid"></div>
+  <div id="store" class="store hidden"></div>
 
-  <script>
-    const ws = new WebSocket('ws://' + window.location.host);
-    const status = document.getElementById('status');
-    
-    let tempData = [];
-    let cryptoHistoryData = { bitcoin: [], ethereum: [], timestamps: [] };
-    let detailedCryptoData = { bitcoin: [], ethereum: [], timestamps: [] };
-    const maxTempPoints = 20;
-    
-    let currentCoin = 'bitcoin';
-    let currentTimeframe = '1h';
-    
-    ws.onopen = () => {
-      status.textContent = 'Connected';
-      status.className = 'status connected';
-    };
-    
-    ws.onclose = () => {
-      status.textContent = 'Disconnected';
-      status.className = 'status disconnected';
-      setTimeout(() => {
-        location.reload();
-      }, 5000);
-    };
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      // Update sensor data
-      document.getElementById('temp').textContent = data.sensor.temperature + '°C';
-      document.getElementById('humidity').textContent = data.sensor.humidity + '%';
-      document.getElementById('sensor-time').textContent = 'Just now';
-      
-      // Update crypto data
-      const btcPrice = data.crypto.bitcoin?.usd || 0;
-      const ethPrice = data.crypto.ethereum?.usd || 0;
-      const btcChange = data.crypto.bitcoin?.usd_24h_change || 0;
-      const ethChange = data.crypto.ethereum?.usd_24h_change || 0;
-      
-      document.getElementById('bitcoin').textContent = '$' + btcPrice.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      });
-      document.getElementById('ethereum').textContent = '$' + ethPrice.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      });
-      
-      // Update 24h change indicators
-      updateChangeIndicator('bitcoin-change', btcChange);
-      updateChangeIndicator('ethereum-change', ethChange);
-      
-      // Update timestamp indicators
-      updateTimestampIndicators(data);
-      
-      // Update last updated time
-      document.getElementById('crypto-update').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
-      
-      // Update charts
-      updateTempChart(parseFloat(data.sensor.temperature));
-      
-      if (data.crypto.history) {
-        cryptoHistoryData = data.crypto.history;
-        drawRealCryptoChart();
-        document.getElementById('crypto-points').textContent = data.crypto.history.bitcoin.length + ' points';
-      }
-      
-      if (data.crypto.detailedHistory) {
-        detailedCryptoData = data.crypto.detailedHistory;
-      }
-    };
-    
-    function updateChangeIndicator(elementId, change) {
-      const element = document.getElementById(elementId);
-      element.textContent = (change > 0 ? '+' : '') + change.toFixed(2) + '%';
-      element.className = 'change ' + (change >= 0 ? 'positive' : 'negative');
-    }
-    
-    function updateTimestampIndicators(data) {
-      const now = Date.now();
-      const history = data.crypto.detailedHistory || { bitcoin: [], ethereum: [], timestamps: [] };
-      
-      // Find prices from 15m, 30m, 1h ago
-      const timestamps = history.timestamps;
-      const btcPrices = history.bitcoin;
-      const ethPrices = history.ethereum;
-      
-      const price15m = findPriceAtTime(timestamps, btcPrices, ethPrices, now - 15 * 60 * 1000);
-      const price30m = findPriceAtTime(timestamps, btcPrices, ethPrices, now - 30 * 60 * 1000);
-      const price1h = findPriceAtTime(timestamps, btcPrices, ethPrices, now - 60 * 60 * 1000);
-      
-      document.getElementById('price-15m').textContent = `BTC: $${price15m.btc.toLocaleString()} | ETH: $${price15m.eth.toLocaleString()}`;
-      document.getElementById('price-30m').textContent = `BTC: $${price30m.btc.toLocaleString()} | ETH: $${price30m.eth.toLocaleString()}`;
-      document.getElementById('price-1h').textContent = `BTC: $${price1h.btc.toLocaleString()} | ETH: $${price1h.eth.toLocaleString()}`;
-    }
-    
-    function findPriceAtTime(timestamps, btcPrices, ethPrices, targetTime) {
-      if (!timestamps.length) return { btc: 0, eth: 0 };
-      
-      let closestIndex = 0;
-      let minDiff = Math.abs(timestamps[0] - targetTime);
-      
-      for (let i = 1; i < timestamps.length; i++) {
-        const diff = Math.abs(timestamps[i] - targetTime);
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestIndex = i;
-        }
-      }
-      
-      return {
-        btc: Math.round(btcPrices[closestIndex] || 0),
-        eth: Math.round(ethPrices[closestIndex] || 0)
-      };
-    }
-    
-    function updateTempChart(temp) {
-      tempData.push(temp);
-      if (tempData.length > maxTempPoints) tempData.shift();
-      drawChart('tempChart', tempData, '#ff6b6b');
-      document.getElementById('temp-points').textContent = tempData.length + ' points';
-    }
-    
-    function drawChart(canvasId, data, color) {
-      const canvas = document.getElementById(canvasId);
-      const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * 2;
-      canvas.height = rect.height * 2;
-      ctx.scale(2, 2);
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      if (data.length < 2) return;
-      
-      const max = Math.max(...data);
-      const min = Math.min(...data);
-      const range = max - min || 1;
-      const width = rect.width;
-      const height = rect.height - 40;
-      
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      
-      data.forEach((point, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - ((point - min) / range) * height + 20;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      
-      ctx.stroke();
-    }
-    
-    function drawRealCryptoChart() {
-      const canvas = document.getElementById('cryptoChart');
-      const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * 2;
-      canvas.height = rect.height * 2;
-      ctx.scale(2, 2);
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      if (cryptoHistoryData.bitcoin.length < 2) return;
-      
-      const width = rect.width;
-      const height = rect.height - 40;
-      
-      // Draw Bitcoin
-      const btcData = cryptoHistoryData.bitcoin;
-      const btcMax = Math.max(...btcData);
-      const btcMin = Math.min(...btcData);
-      const btcRange = btcMax - btcMin || 1;
-      
-      ctx.strokeStyle = '#f7931a';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      
-      btcData.forEach((point, i) => {
-        const x = (i / (btcData.length - 1)) * width;
-        const y = height - ((point - btcMin) / btcRange) * (height * 0.4) + 20;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      
-      ctx.stroke();
-      
-      // Draw Ethereum
-      const ethData = cryptoHistoryData.ethereum;
-      const ethMax = Math.max(...ethData);
-      const ethMin = Math.min(...ethData);
-      const ethRange = ethMax - ethMin || 1;
-      
-      ctx.strokeStyle = '#627eea';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      
-      ethData.forEach((point, i) => {
-        const x = (i / (ethData.length - 1)) * width;
-        const y = height - ((point - ethMin) / ethRange) * (height * 0.4) + height * 0.5;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      
-      ctx.stroke();
-      
-      // Add price labels
-      ctx.fillStyle = '#888';
-      ctx.font = '10px monospace';
-      ctx.fillText('BTC: $' + btcMax.toFixed(0), 5, 15);
-      ctx.fillText('ETH: $' + ethMax.toFixed(0), 5, height - 5);
-    }
-    
-    // Modal functionality
-    const modal = document.getElementById('cryptoModal');
-    const cryptoCard = document.getElementById('crypto-card');
-    const closeBtn = document.getElementsByClassName('close')[0];
-    
-    cryptoCard.onclick = () => {
-      modal.style.display = 'block';
-      loadDetailedChart(currentCoin, currentTimeframe);
-    };
-    
-    closeBtn.onclick = () => {
-      modal.style.display = 'none';
-    };
-    
-    window.onclick = (event) => {
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    };
-    
-    // Time selector buttons
-    document.querySelectorAll('.time-btn').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentTimeframe = btn.dataset.time;
-        loadDetailedChart(currentCoin, currentTimeframe);
-      };
-    });
-    
-    function loadDetailedChart(coin, timeframe) {
-      // Use local data for now, could be extended to fetch from API
-      const data = detailedCryptoData;
-      if (!data.bitcoin.length) return;
-      
-      const prices = data[coin] || [];
-      const timestamps = data.timestamps || [];
-      
-      // Filter data based on timeframe
-      const now = Date.now();
-      const timeRanges = {
-        '1h': 60 * 60 * 1000,
-        '4h': 4 * 60 * 60 * 1000,
-        '12h': 12 * 60 * 60 * 1000,
-        '24h': 24 * 60 * 60 * 1000
-      };
-      
-      const cutoff = now - timeRanges[timeframe];
-      const filteredData = [];
-      
-      for (let i = 0; i < timestamps.length; i++) {
-        if (timestamps[i] >= cutoff) {
-          filteredData.push(prices[i]);
-        }
-      }
-      
-      drawDetailedChart(filteredData, coin);
-      updateModalStats(coin, prices);
-    }
-    
-    function drawDetailedChart(data, coin) {
-      const canvas = document.getElementById('modalChart');
-      const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * 2;
-      canvas.height = rect.height * 2;
-      ctx.scale(2, 2);
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      if (data.length < 2) return;
-      
-      const max = Math.max(...data);
-      const min = Math.min(...data);
-      const range = max - min || 1;
-      const width = rect.width;
-      const height = rect.height - 40;
-      
-      const color = coin === 'bitcoin' ? '#f7931a' : '#627eea';
-      
-      // Draw grid
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
-        const y = (height / 4) * i;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-      
-      // Draw price line
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      
-      data.forEach((point, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - ((point - min) / range) * height + 20;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      
-      ctx.stroke();
-      
-      // Add price labels
-      ctx.fillStyle = '#fff';
-      ctx.font = '12px monospace';
-      ctx.fillText('$' + max.toFixed(2), 5, 15);
-      ctx.fillText('$' + min.toFixed(2), 5, height + 15);
-    }
-    
-    function updateModalStats(coin, prices) {
-      if (!prices.length) return;
-      
-      const current = prices[prices.length - 1];
-      const high = Math.max(...prices);
-      const low = Math.min(...prices);
-      
-      document.getElementById('modal-title').textContent = 
-        coin.charAt(0).toUpperCase() + coin.slice(1) + ' Price History';
-      document.getElementById('modal-current').textContent = '$' + current.toLocaleString();
-      document.getElementById('modal-high').textContent = '$' + high.toLocaleString();
-      document.getElementById('modal-low').textContent = '$' + low.toLocaleString();
-      
-      // Get 24h change from WebSocket data
-      const changeElement = document.getElementById(coin + '-change');
-      if (changeElement) {
-        document.getElementById('modal-change').textContent = changeElement.textContent;
-        document.getElementById('modal-change').className = 
-          'stat-value ' + (changeElement.classList.contains('positive') ? 'positive' : 'negative');
-      }
-    }
-  </script>
+<script>
+let apps = [];
+let installedApps = JSON.parse(localStorage.getItem('installedApps') || '[]');
+let editMode = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadApps();
+  renderGrid();
+});
+
+function loadApps() {
+  fetch('/api/apps')
+    .then(r => r.json())
+    .then(data => { apps = data; renderStore(); });
+}
+
+function renderStore() {
+  const container = document.getElementById('store');
+  container.innerHTML = '';
+  apps.forEach(app => {
+    const el = document.createElement('div');
+    el.className = 'store-item';
+    el.innerHTML = `<h3>${app.icon} ${app.name}</h3><p>${app.description}</p><button class='btn'>Install</button>`;
+    el.querySelector('button').onclick = () => installApp(app.id);
+    container.appendChild(el);
+  });
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  installedApps.forEach(id => {
+    const app = apps.find(a => a.id === id);
+    if (!app) return;
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `<h3>${app.icon} ${app.name}</h3><div id="content-${id}">Loading...</div>`;
+    grid.appendChild(el);
+    loadAppContent(id);
+  });
+}
+
+function toggleStore() {
+  document.getElementById('store').classList.toggle('hidden');
+}
+
+function toggleEdit() {
+  editMode = !editMode;
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(c => editMode ? c.classList.add('edit') : c.classList.remove('edit'));
+}
+
+function installApp(id) {
+  if (!installedApps.includes(id)) installedApps.push(id);
+  localStorage.setItem('installedApps', JSON.stringify(installedApps));
+  renderGrid();
+}
+
+// --- SIMPLE APP LOADER ---
+function loadAppContent(id) {
+  const el = document.getElementById('content-'+id);
+  if (id === 'bitcoin') {
+    el.innerHTML = "💰 BTC Price Graph <br>(embed canvas here)";
+  } else if (id === 'ethereum') {
+    el.innerHTML = "Ξ ETH Price Graph <br>(embed canvas here)";
+  } else if (id === 'temp') {
+    el.innerHTML = "🌡️ Temp/Humidity widget";
+  } else if (id === 'spotify') {
+    el.innerHTML = "🎵 Spotify Controls (TODO)";
+  } else {
+    el.innerHTML = "⚠️ Unknown widget";
+  }
+}
+</script>
 </body>
 </html>
