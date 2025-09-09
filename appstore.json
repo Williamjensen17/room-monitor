@@ -16,14 +16,14 @@
   {
     "id": "temp",
     "name": "Temperature & Humidity",
-    "description": "Monitor your room climate",
+    "description": "Monitor your room climate (sensor simulated here)",
     "type": "sensor",
     "icon": "🌡️"
   },
   {
     "id": "spotify",
     "name": "Spotify Control",
-    "description": "Control Spotify playback",
+    "description": "Control Spotify playback (demo stub)",
     "type": "media",
     "icon": "🎵"
   }
