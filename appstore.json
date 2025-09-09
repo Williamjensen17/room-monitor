@@ -3,28 +3,28 @@
     "id": "bitcoin",
     "name": "Bitcoin Price",
     "description": "Live Bitcoin price graph",
-    "type": "crypto",
-    "icon": "₿"
+    "icon": "₿",
+    "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/bitcoin.js"
   },
   {
     "id": "ethereum",
     "name": "Ethereum Price",
     "description": "Live Ethereum price graph",
-    "type": "crypto",
-    "icon": "Ξ"
+    "icon": "Ξ",
+    "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/ethereum.js"
   },
   {
     "id": "temp",
     "name": "Temperature & Humidity",
-    "description": "Monitor your room climate (sensor simulated here)",
-    "type": "sensor",
-    "icon": "🌡️"
+    "description": "Room climate monitor (simulated)",
+    "icon": "🌡️",
+    "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/temp.js"
   },
   {
     "id": "spotify",
     "name": "Spotify Control",
-    "description": "Control Spotify playback (demo stub)",
-    "type": "media",
-    "icon": "🎵"
+    "description": "Play/Pause and track info",
+    "icon": "🎵",
+    "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/spotify.js"
   }
 ]
