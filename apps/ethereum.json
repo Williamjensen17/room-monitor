@@ -1,1 +1,8 @@
-
+{
+  "id": "ethereum",
+  "name": "Ethereum Price",
+  "description": "Live Ethereum price graph",
+  "type": "crypto",
+  "icon": "Ξ",
+  "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/ethereum.js"
+}
