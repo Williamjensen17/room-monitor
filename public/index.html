@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Room Monitor Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
     body { background:#0a0a0a; color:#fff; font-family:sans-serif; margin:0; }
-    .topbar { background:#1a1a1a; padding:10px 20px; display:flex; justify-content:space-between; }
-    .btn { background:#333; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; }
+    .topbar { background:#1a1a1a; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .btn { background:#333; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-left:5px; }
     .btn:hover { background:#4a9eff; }
     #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:15px; padding:20px; }
-    .card { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; }
+    .card { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; cursor:default; }
+    .card.dragging { opacity:0.6; }
     .store { display:flex; flex-wrap:wrap; gap:10px; padding:20px; }
     .store-item { background:#222; border:1px solid #444; border-radius:6px; padding:10px; width:200px; }
     .hidden { display:none; }
@@ -22,6 +24,7 @@
     <h2>📊 Room Monitor</h2>
     <div>
       <button class="btn" onclick="toggleStore()">🛒 App Store</button>
+      <button class="btn" onclick="toggleEdit()">✏️ Edit Mode</button>
     </div>
   </div>
 
@@ -31,13 +34,16 @@
 <script>
 let apps = [];
 let installed = JSON.parse(localStorage.getItem("installedApps") || "[]");
+let editMode = false;
 
-// Load apps list
-fetch('/api/apps').then(r=>r.json()).then(list=>{
-  apps=list;
-  renderStore();
-  renderGrid();
-});
+// Load available apps
+fetch('/api/apps')
+  .then(r=>r.json())
+  .then(list=>{
+    apps=list;
+    renderStore();
+    renderGrid();
+  });
 
 function renderStore(){
   const store=document.getElementById('store');
@@ -72,10 +78,16 @@ function renderGrid(){
     if(!meta) return;
     const card=document.createElement('div');
     card.className='card';
+    card.setAttribute('data-id', inst.id);
     card.innerHTML=`<h3>${meta.icon} ${meta.name}</h3><div id="content-${inst.id}"></div>`;
     grid.appendChild(card);
     loadApp(inst.id);
   });
+
+  // Enable/disable drag with SortableJS
+  if(editMode){
+    enableDrag();
+  }
 }
 
 function loadApp(id){
@@ -87,6 +99,38 @@ function loadApp(id){
 
 function toggleStore(){
   document.getElementById('store').classList.toggle('hidden');
+}
+
+function toggleEdit(){
+  editMode=!editMode;
+  if(editMode){
+    enableDrag();
+    alert("Edit Mode: drag cards to reorder, then exit Edit Mode to save");
+  } else {
+    if(window.sortable){
+      window.sortable.destroy();
+      saveOrder();
+    }
+  }
+}
+
+// --- DRAG & DROP ---
+function enableDrag(){
+  const grid=document.getElementById('grid');
+  window.sortable = new Sortable(grid, {
+    animation:150,
+    onEnd:()=>{}
+  });
+}
+
+function saveOrder(){
+  const order=[];
+  document.querySelectorAll('#grid .card').forEach(card=>{
+    order.push({id:card.getAttribute('data-id')});
+  });
+  installed = order;
+  localStorage.setItem('installedApps', JSON.stringify(installed));
+  console.log("Saved new order", installed);
 }
 </script>
 </body>
