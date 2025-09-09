@@ -1,32 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Room Monitor with App Store</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Room Monitor Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { background:#0a0a0a; color:#fff; font-family:sans-serif; margin:0; }
-    .topbar { background:#1a1a1a; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .topbar { background:#1a1a1a; padding:10px 20px; display:flex; justify-content:space-between; }
     .btn { background:#333; color:#fff; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; }
     .btn:hover { background:#4a9eff; }
-    #grid { 
-      display:grid; 
-      grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); 
-      gap:15px; 
-      padding:20px; 
-    }
-    .card { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; position: relative; min-height:150px; }
-    .card.edit { outline:2px dashed #4a9eff; cursor:move; }
-    .store { display:flex; gap:10px; flex-wrap:wrap; padding:20px; }
-    .store-item { background:#222; border:1px solid #444; border-radius:6px; padding:10px; cursor:pointer; width:200px; }
+    #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:15px; padding:20px; }
+    .card { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; }
+    .store { display:flex; flex-wrap:wrap; gap:10px; padding:20px; }
+    .store-item { background:#222; border:1px solid #444; border-radius:6px; padding:10px; width:200px; }
     .hidden { display:none; }
   </style>
 </head>
 <body>
   <div class="topbar">
-    <span>📊 Room Monitor Dashboard</span>
+    <h2>📊 Room Monitor</h2>
     <div>
-      <button class="btn" onclick="toggleEdit()">✏️ Edit Mode</button>
       <button class="btn" onclick="toggleStore()">🛒 App Store</button>
     </div>
   </div>
@@ -36,76 +30,63 @@
 
 <script>
 let apps = [];
-let installedApps = JSON.parse(localStorage.getItem('installedApps') || '[]');
-let editMode = false;
+let installed = JSON.parse(localStorage.getItem("installedApps") || "[]");
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadApps();
+// Load apps list
+fetch('/api/apps').then(r=>r.json()).then(list=>{
+  apps=list;
+  renderStore();
   renderGrid();
 });
 
-function loadApps() {
-  fetch('/api/apps')
-    .then(r => r.json())
-    .then(data => { apps = data; renderStore(); });
-}
-
-function renderStore() {
-  const container = document.getElementById('store');
-  container.innerHTML = '';
-  apps.forEach(app => {
-    const el = document.createElement('div');
-    el.className = 'store-item';
-    el.innerHTML = `<h3>${app.icon} ${app.name}</h3><p>${app.description}</p><button class='btn'>Install</button>`;
-    el.querySelector('button').onclick = () => installApp(app.id);
-    container.appendChild(el);
+function renderStore(){
+  const store=document.getElementById('store');
+  store.innerHTML='';
+  apps.forEach(app=>{
+    const el=document.createElement('div');
+    el.className='store-item';
+    el.innerHTML=`
+      <h3>${app.icon} ${app.name}</h3>
+      <p>${app.description}</p>
+      <button class='btn'>Install</button>
+    `;
+    el.querySelector('button').onclick=()=>installApp(app);
+    store.appendChild(el);
   });
 }
 
-function renderGrid() {
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  installedApps.forEach(id => {
-    const app = apps.find(a => a.id === id);
-    if (!app) return;
-    const el = document.createElement('div');
-    el.className = 'card';
-    el.innerHTML = `<h3>${app.icon} ${app.name}</h3><div id="content-${id}">Loading...</div>`;
-    grid.appendChild(el);
-    loadAppContent(id);
-  });
-}
-
-function toggleStore() {
-  document.getElementById('store').classList.toggle('hidden');
-}
-
-function toggleEdit() {
-  editMode = !editMode;
-  const cards = document.querySelectorAll('.card');
-  cards.forEach(c => editMode ? c.classList.add('edit') : c.classList.remove('edit'));
-}
-
-function installApp(id) {
-  if (!installedApps.includes(id)) installedApps.push(id);
-  localStorage.setItem('installedApps', JSON.stringify(installedApps));
+async function installApp(app){
+  if(installed.find(a=>a.id===app.id)) return;
+  const code=await (await fetch(app.src)).text();
+  localStorage.setItem('app:'+app.id, code);
+  installed.push({id:app.id,name:app.name});
+  localStorage.setItem('installedApps', JSON.stringify(installed));
   renderGrid();
 }
 
-// --- SIMPLE APP LOADER ---
-function loadAppContent(id) {
-  const el = document.getElementById('content-'+id);
-  if (id === 'bitcoin') {
-    el.innerHTML = "💰 BTC Price Graph <br>(embed canvas here)";
-  } else if (id === 'ethereum') {
-    el.innerHTML = "Ξ ETH Price Graph <br>(embed canvas here)";
-  } else if (id === 'temp') {
-    el.innerHTML = "🌡️ Temp/Humidity widget";
-  } else if (id === 'spotify') {
-    el.innerHTML = "🎵 Spotify Controls (TODO)";
-  } else {
-    el.innerHTML = "⚠️ Unknown widget";
-  }
+function renderGrid(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  installed.forEach(inst=>{
+    const meta=apps.find(a=>a.id===inst.id);
+    if(!meta) return;
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<h3>${meta.icon} ${meta.name}</h3><div id="content-${inst.id}"></div>`;
+    grid.appendChild(card);
+    loadApp(inst.id);
+  });
+}
+
+function loadApp(id){
+  const code=localStorage.getItem('app:'+id);
+  if(!code) return;
+  const fn=new Function('containerId', code);
+  fn('content-'+id);
+}
+
+function toggleStore(){
+  document.getElementById('store').classList.toggle('hidden');
 }
 </script>
 </body>
