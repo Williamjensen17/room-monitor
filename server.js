@@ -9,19 +9,26 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Serve static UI
+// Serve UI + widget JS apps
 app.use(express.static("public"));
+app.use("/apps", express.static(path.join(__dirname, "public/apps")));
 
 // === APP STORE ENDPOINT ===
 app.get("/api/apps", (req, res) => {
-  fs.readFile(path.join(__dirname, "appstore.json"), "utf8", (err, data) => {
-    if (err) return res.status(500).json({ error: "Could not load appstore" });
-    res.json(JSON.parse(data));
+  const appsDir = path.join(__dirname, "apps");
+  fs.readdir(appsDir, (err, files) => {
+    if (err) return res.status(500).json({ error: "Cannot read apps dir" });
+    const apps = files
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => {
+        const data = fs.readFileSync(path.join(appsDir, f), "utf8");
+        return JSON.parse(data);
+      });
+    res.json(apps);
   });
 });
 
-// === SENSOR STUB (Simulated Data) ===
-// Replace later with hardware (DHT22, DS18B20, etc.)
+// === SENSOR STUB ===
 function getSensorData() {
   return {
     temperature: (20 + Math.random() * 10).toFixed(1),
@@ -30,7 +37,7 @@ function getSensorData() {
   };
 }
 
-// === CRYPTO DATA (Bitcoin + Ethereum) ===
+// === CRYPTO (BTC+ETH) ===
 let cryptoHistory = {
   bitcoin: [],
   ethereum: [],
@@ -40,10 +47,7 @@ let cryptoHistory = {
 async function getCryptoPrices() {
   return new Promise((resolve) => {
     const url =
-      "https://api.coingecko.com/api/v3/simple/price" +
-      "?ids=bitcoin,ethereum" +
-      "&vs_currencies=usd" +
-      "&include_24hr_change=true";
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true";
 
     https
       .get(url, (res) => {
@@ -60,7 +64,7 @@ async function getCryptoPrices() {
             cryptoHistory.ethereum.push(ethPrice);
             cryptoHistory.timestamps.push(now);
 
-            if (cryptoHistory.bitcoin.length > 100) {
+            if (cryptoHistory.bitcoin.length > 500) {
               cryptoHistory.bitcoin.shift();
               cryptoHistory.ethereum.shift();
               cryptoHistory.timestamps.shift();
@@ -70,39 +74,40 @@ async function getCryptoPrices() {
               ...parsed,
               history: cryptoHistory,
             });
-          } catch (e) {
-            resolve({ bitcoin: { usd: 0 }, ethereum: { usd: 0 }, history: cryptoHistory });
+          } catch {
+            resolve({
+              bitcoin: { usd: 0 },
+              ethereum: { usd: 0 },
+              history: cryptoHistory,
+            });
           }
         });
       })
       .on("error", () => {
-        resolve({ bitcoin: { usd: 0 }, ethereum: { usd: 0 }, history: cryptoHistory });
+        resolve({
+          bitcoin: { usd: 0 },
+          ethereum: { usd: 0 },
+          history: cryptoHistory,
+        });
       });
   });
 }
 
-// === SPOTIFY (Placeholder, not functional yet) ===
+// === SPOTIFY (Stub) ===
 function getSpotifyStatus() {
   return {
-    track: "No track (demo placeholder)",
+    track: "No track (demo)",
     artist: "—",
     playing: false,
   };
 }
 
-// === API Endpoints for each app ===
-app.get("/api/temp", (req, res) => {
-  res.json(getSensorData());
-});
-
+// APIs
+app.get("/api/temp", (req, res) => res.json(getSensorData()));
 app.get("/api/crypto", async (req, res) => {
-  const crypto = await getCryptoPrices();
-  res.json(crypto);
+  res.json(await getCryptoPrices());
 });
-
-app.get("/api/spotify", (req, res) => {
-  res.json(getSpotifyStatus());
-});
+app.get("/api/spotify", (req, res) => res.json(getSpotifyStatus()));
 
 // === WebSocket Broadcast ===
 wss.on("connection", (ws) => {
@@ -118,13 +123,10 @@ wss.on("connection", (ws) => {
   sendData();
   const interval = setInterval(sendData, 30000);
 
-  ws.on("close", () => {
-    clearInterval(interval);
-    console.log("❌ Client disconnected");
-  });
+  ws.on("close", () => clearInterval(interval));
 });
 
-// === Start server ===
+// Start
 const PORT = 80;
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Room Monitor running on http://localhost:${PORT}`);
