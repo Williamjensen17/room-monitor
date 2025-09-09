@@ -2,7 +2,6 @@
   "id": "bitcoin",
   "name": "Bitcoin Price",
   "description": "Live Bitcoin price graph",
-  "type": "crypto",
   "icon": "₿",
   "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/bitcoin.js"
 }
