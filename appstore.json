@@ -1,0 +1,30 @@
+[
+  {
+    "id": "bitcoin",
+    "name": "Bitcoin Price",
+    "description": "Live Bitcoin price graph",
+    "type": "crypto",
+    "icon": "₿"
+  },
+  {
+    "id": "ethereum",
+    "name": "Ethereum Price",
+    "description": "Live Ethereum price graph",
+    "type": "crypto",
+    "icon": "Ξ"
+  },
+  {
+    "id": "temp",
+    "name": "Temperature & Humidity",
+    "description": "Monitor your room climate",
+    "type": "sensor",
+    "icon": "🌡️"
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify Control",
+    "description": "Control Spotify playback",
+    "type": "media",
+    "icon": "🎵"
+  }
+]
