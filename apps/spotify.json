@@ -1,1 +1,8 @@
-
+{
+  "id": "spotify",
+  "name": "Spotify Control",
+  "description": "Play/Pause and track info",
+  "type": "media",
+  "icon": "🎵",
+  "src": "https://raw.githubusercontent.com/Williamjensen17/room-monitor/main/public/apps/spotify.js"
+}
